@@ -1,0 +1,65 @@
+id: TurnScalewayFileIntoPostgresqlTable
+namespace: datasonar.dev
+labels:
+  flowLevel: SUB
+  scope: ingestion
+description: | 
+  "Downloads a CSV file located on a S3 bucket then maps the file into a database format.
+  Header keys are used to infer columns structure while payload is used as actual data.
+  Finally the table is created on the target database."
+
+inputs:
+    
+  - id: s3.filename
+    type: STRING
+
+  - id: s3.endpoint_url
+    type: STRING
+
+  - id: s3.access_key_id
+    type: STRING
+
+  - id: s3.secret_access_key
+    type: STRING
+
+  - id: s3.bucket_name
+    type: STRING
+
+  - id: s3.csv_separator
+    type: STRING
+
+  - id: s3.chunk_size
+    type: INT
+
+  - id: postgresql.hostname
+    type: STRING
+
+  - id: postgresql.database
+    type: STRING
+
+  - id: postgresql.port
+    type: STRING
+
+  - id: postgresql.username
+    type: STRING
+
+  - id: postgresql.password
+    type: STRING
+
+  - id: postgresql.ingestion_schemaname
+    type: STRING
+
+tasks:
+
+  - id: ingestCsvToDatabase
+    type: io.kestra.plugin.scripts.python.Commands
+    namespaceFiles:
+      enabled: true
+    taskRunner:
+      type: io.kestra.plugin.core.runner.Process
+    beforeCommands:
+      - 'pip install boto3 pandas sqlalchemy psycopg2-binary'
+    outputFiles:
+      - "out.csv"
+    commands:
+      - python scripts/ingestCsvToDatabase.py '{{inputs.s3.endpoint_url}}' '{{inputs.s3.access_key_id}}' '{{inputs.s3.secret_access_key}}' '{{inputs.s3.bucket_name}}' '{{inputs.s3.filename}}' '{{inputs.s3.chunk_size}}' '{{inputs.s3.csv_separator}}' '{{inputs.postgresql.username}}' '{{inputs.postgresql.password}}' '{{inputs.postgresql.hostname}}' '{{inputs.postgresql.port}}' '{{inputs.postgresql.database}}' '{{inputs.postgresql.ingestion_schemaname}}'

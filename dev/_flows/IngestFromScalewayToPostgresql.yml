@@ -1,0 +1,144 @@
+id: IngestFromScalewayToPostgresql
+namespace: datasonar.dev
+labels:
+  flowLevel: MAIN
+  scope: ingestion
+description: | 
+  "Lists CSV files from a S3 bucket then transforms them into database tables."
+
+inputs:
+  - id: s3.prefix
+    type: STRING
+    defaults: "dev/"
+    
+  - id: s3.file_pattern
+    type: STRING
+    defaults: "online_retail_small_data.csv"
+
+  - id: s3.file_extension
+    type: STRING
+    defaults: "csv"
+
+  - id: s3.endpoint_url
+    type: STRING
+    defaults: 'https://s3.fr-par.scw.cloud'
+
+  - id: s3.bucket_name
+    type: STRING
+    defaults: 'datasonar-input'
+
+  - id: s3.csv_separator
+    type: STRING
+    defaults: ','
+
+  - id: s3.chunk_size
+    type: INT
+    defaults: 10000
+
+  - id: postgresql.hostname
+    type: STRING
+    defaults: '4505da19-4cd7-40c8-ab0a-d7f44b75731e.pg.sdb.fr-par.scw.cloud'
+
+  - id: postgresql.database
+    type: STRING
+    defaults: 'serverless-sqldb-datasonar'
+
+  - id: postgresql.port
+    type: STRING
+    defaults: '5432'
+
+  - id: postgresql.username
+    type: STRING
+    defaults: 'be52a34e-7113-44fd-805a-829d8faaaa5b'
+
+  - id: postgresql.ingestion_schemaname
+    type: STRING
+    defaults: 'input_dev'
+
+  - id: postgresql.analytics_schemaname
+    type: STRING
+    defaults: 'dataviz_dev'
+
+tasks:
+  - id: listScalewayFiles
+    type: io.kestra.plugin.core.flow.Subflow
+    namespace: datasonar.dev
+    flowId: ListScalewayFiles
+    wait: true
+    transmitFailed: true
+    inputs:
+      s3.access_key_id: "{{ secret('DATASONAR_S3_KEY_ID') }}"
+      s3.bucket_name: '{{ inputs.s3.bucket_name }}'
+      s3.endpoint_url: '{{ inputs.s3.endpoint_url }}'
+      s3.file_extension: '{{ inputs.s3.file_extension }}'
+      s3.file_pattern: '{{ inputs.s3.file_pattern }}'
+      s3.secret_access_key: "{{ secret('DATASONAR_S3_KEY_ACCESS') }}"
+      s3.prefix: '{{ inputs.s3.prefix }}'
+      
+
+  - id: integrateEachListedFileIntoPostgresql
+    type: io.kestra.plugin.core.flow.EachSequential
+    value: "{{ outputs.listScalewayFiles.outputs.listed_files }}"
+    tasks:
+    - id: turnScalewayFileIntoPostgresqlTable
+      type: io.kestra.plugin.core.flow.Subflow
+      namespace: datasonar.dev
+      flowId: TurnScalewayFileIntoPostgresqlTable
+      wait: true
+      transmitFailed: true
+      inputs:
+        postgresql.database: '{{ inputs.postgresql.database }}'
+        postgresql.hostname: '{{ inputs.postgresql.hostname }}'
+        postgresql.password: "{{ secret('DATASONAR_DB_PASSWORD') }}"
+        postgresql.port: '{{ inputs.postgresql.port }}'
+        postgresql.ingestion_schemaname: '{{ inputs.postgresql.ingestion_schemaname }}'
+        postgresql.username: '{{ inputs.postgresql.username }}'
+        s3.access_key_id: "{{ secret('DATASONAR_S3_KEY_ID') }}"
+        s3.bucket_name: '{{ inputs.s3.bucket_name }}'
+        s3.csv_separator: '{{ inputs.s3.csv_separator }}'
+        s3.chunk_size: '{{ inputs.s3.chunk_size }}'
+        s3.endpoint_url: '{{ inputs.s3.endpoint_url }}'
+        s3.filename: '{{ taskrun.value }}'
+        s3.secret_access_key: "{{ secret('DATASONAR_S3_KEY_ACCESS') }}"
+
+    - id: addScanDateColumn
+      type: io.kestra.plugin.jdbc.postgresql.Query
+      url: jdbc:postgresql://{{ inputs.postgresql.hostname }}:{{ inputs.postgresql.port }}/{{ inputs.postgresql.database }}
+      username: '{{ inputs.postgresql.username }}'
+      password: "{{ secret('DATASONAR_DB_PASSWORD') }}"
+      sql: |
+        alter table {{ inputs.postgresql.ingestion_schemaname }}.{{ taskrun.value | substringAfter('/') | substringBefore('.csv') }}
+        add column IF NOT EXISTS ScanDate VARCHAR DEFAULT '{{ execution.startDate }}';
+
+    - id: runDuplicatesAnalytics
+      type: io.kestra.plugin.core.flow.Subflow
+      namespace: datasonar.dev
+      flowId: DuplicatesCheck
+      wait: true
+      transmitFailed: true
+      inputs:
+        postgresql.database: '{{ inputs.postgresql.database }}'
+        postgresql.hostname: '{{ inputs.postgresql.hostname }}'
+        postgresql.password: "{{ secret('DATASONAR_DB_PASSWORD') }}"
+        postgresql.port: '{{ inputs.postgresql.port }}'
+        postgresql.ingestion_schemaname: '{{ inputs.postgresql.ingestion_schemaname }}'
+        postgresql.analytics_schemaname: '{{ inputs.postgresql.analytics_schemaname }}'
+        postgresql.username: '{{ inputs.postgresql.username }}'
+        s3.filename: '{{ taskrun.value }}'
+
+    - id: runOutliersAnalytics
+      type: io.kestra.plugin.core.flow.Subflow
+      namespace: datasonar.dev
+      flowId: OutliersCheck
+      wait: true
+      transmitFailed: true
+      inputs:
+        postgresql.database: '{{ inputs.postgresql.database }}'
+        postgresql.hostname: '{{ inputs.postgresql.hostname }}'
+        postgresql.password: "{{ secret('DATASONAR_DB_PASSWORD') }}"
+        postgresql.port: '{{ inputs.postgresql.port }}'
+        postgresql.ingestion_schemaname: '{{ inputs.postgresql.ingestion_schemaname }}'
+        postgresql.analytics_schemaname: '{{ inputs.postgresql.analytics_schemaname }}'
+        postgresql.username: '{{ inputs.postgresql.username }}'
+        s3.filename: '{{ taskrun.value }}'
+    

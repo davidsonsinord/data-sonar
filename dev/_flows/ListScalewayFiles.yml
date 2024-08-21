@@ -1,0 +1,59 @@
+id: ListScalewayFiles
+namespace: datasonar.dev
+labels:
+  flowLevel: SUB
+  scope: ingestion
+description: | 
+  "Lists all CSV files located on a S3 bucket.
+  Some filtering options are available, like s3 prefix or file extension.
+  Results are returned in a JSON list stored into the listed_files output attribute."
+
+inputs:
+  - id: s3.prefix
+    type: STRING
+    
+  - id: s3.file_pattern
+    type: STRING
+
+  - id: s3.file_extension
+    type: STRING
+
+  - id: s3.endpoint_url
+    type: STRING
+
+  - id: s3.access_key_id
+    type: STRING
+
+  - id: s3.secret_access_key
+    type: STRING
+
+  - id: s3.bucket_name
+    type: STRING
+
+outputs:
+  - id: listed_files
+    type: STRING
+    value: "{{ read(outputs.listFilesCommands.outputFiles['listed-files.json']) }}"
+
+tasks:
+  # - id: listFiles
+  #   type: io.kestra.plugin.scripts.python.Script
+  #   runner: PROCESS
+  #   beforeCommands:
+  #     - 'pip install boto3 kestra'
+  #   outputFiles:
+  #     - "listed-files.json"
+  #   script: "{{ read('scripts/listS3Files.py') }}"
+
+  - id: listFilesCommands
+    type: io.kestra.plugin.scripts.python.Commands
+    namespaceFiles:
+      enabled: true
+    taskRunner:
+      type: io.kestra.plugin.core.runner.Process
+    beforeCommands:
+      - 'pip install boto3 kestra'
+    outputFiles:
+      - "listed-files.json"
+    commands:
+      - python scripts/listS3Files.py {{ inputs.s3.endpoint_url }} {{ inputs.s3.access_key_id }} {{ inputs.s3.secret_access_key }} {{ inputs.s3.bucket_name }} {{ inputs.s3.prefix }} {{ inputs.s3.file_extension }}

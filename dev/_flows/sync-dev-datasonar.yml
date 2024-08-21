@@ -1,0 +1,18 @@
+id: sync-dev-datasonar
+namespace: datasonar.dev
+labels:
+  scope: ci_cd
+
+tasks:
+  - id: commit_and_push
+    type: io.kestra.plugin.git.PushFlows
+    sourceNamespace: datasonar.dev
+    targetNamespace: datasonar.dev
+    flows: "*"
+    includeChildNamespaces: true
+    gitDirectory: dev/_flows
+    url: https://github.com/davidsonsinord/data-sonar
+    username: theo-huret
+    password: "{{ secret('GIT_TOKEN') }}"
+    branch: main
+    commitMessage: "add flows {{ now() }}"
