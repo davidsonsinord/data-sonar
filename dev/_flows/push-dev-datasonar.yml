@@ -1,4 +1,4 @@
-id: sync-dev-datasonar
+id: push-dev-datasonar
 namespace: datasonar.dev
 labels:
   scope: ci_cd
@@ -26,3 +26,9 @@ tasks:
     namespace: datasonar.dev
     gitDirectory: dev/_files
     commitMessage: "add namespace files {{ now() }}" 
+
+
+triggers:
+  - id: every_30_minutes
+    type: io.kestra.plugin.core.trigger.Schedule
+    cron: "*/30 * * * *"

@@ -1,0 +1,14 @@
+id: pull_dev_datasonar
+namespace: datasonar.dev
+labels:
+  scope: ci_cd
+
+tasks:
+  - id: git
+    type: io.kestra.plugin.git.Sync
+    url: https://github.com/davidsonsinord/data-sonar
+    branch: main
+    username: theo-huret
+    password: "{{ secret('GIT_TOKEN') }}"
+    gitDirectory: dev
+    namespaceFilesDirectory: datasonar.dev
