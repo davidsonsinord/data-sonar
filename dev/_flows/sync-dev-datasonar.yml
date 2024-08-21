@@ -19,11 +19,10 @@ tasks:
 
   - id: commit_and_push_namespace_files
     type: io.kestra.plugin.git.PushNamespaceFiles
+    url: https://github.com/davidsonsinord/data-sonar
     username: theo-huret
     password: "{{ secret('GITHUB_ACCESS_TOKEN') }}"
-    url: https://github.com/davidsonsinord/data-sonar
     branch: main 
     namespace: datasonar.dev
-    files: "*"
     gitDirectory: dev/_files
     commitMessage: "add namespace files {{ now() }}" 
