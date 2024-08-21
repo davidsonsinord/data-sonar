@@ -21,7 +21,7 @@ tasks:
     type: io.kestra.plugin.git.PushNamespaceFiles
     url: https://github.com/davidsonsinord/data-sonar
     username: theo-huret
-    password: "{{ secret('GITHUB_ACCESS_TOKEN') }}"
+    password: "{{ secret('GIT_TOKEN') }}"
     branch: main 
     namespace: datasonar.dev
     gitDirectory: dev/_files
