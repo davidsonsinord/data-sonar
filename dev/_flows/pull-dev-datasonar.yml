@@ -1,4 +1,4 @@
-id: pull_dev_datasonar
+id: pull-dev-datasonar
 namespace: datasonar.dev
 labels:
   scope: ci_cd
