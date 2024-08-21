@@ -4,7 +4,7 @@ labels:
   scope: ci_cd
 
 tasks:
-  - id: commit_and_push
+  - id: commit_and_push_flows
     type: io.kestra.plugin.git.PushFlows
     sourceNamespace: datasonar.dev
     targetNamespace: datasonar.dev
@@ -16,3 +16,14 @@ tasks:
     password: "{{ secret('GIT_TOKEN') }}"
     branch: main
     commitMessage: "add flows {{ now() }}"
+
+  - id: commit_and_push_namespace_files
+    type: io.kestra.plugin.git.PushNamespaceFiles
+    username: theo-huret
+    password: "{{ secret('GITHUB_ACCESS_TOKEN') }}"
+    url: https://github.com/davidsonsinord/data-sonar
+    branch: main 
+    namespace: datasonar.dev
+    files: "*"
+    gitDirectory: dev/_files
+    commitMessage: "add namespace files {{ now() }}" 
