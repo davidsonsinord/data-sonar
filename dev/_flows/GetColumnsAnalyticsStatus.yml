@@ -1,0 +1,41 @@
+id: GetColumnsAnalyticsStatus
+namespace: datasonar.dev
+labels:
+  flowLevel: SUB
+  scope: analytics
+description: | 
+  "Performs duplicates detection checks then exports results into dataviz tables."
+
+inputs:
+  - id: postgresql.database
+    type: STRING
+  - id: postgresql.hostname
+    type: STRING
+  - id: postgresql.password
+    type: STRING
+  - id: postgresql.port
+    type: STRING
+  - id: postgresql.ingestion_schemaname
+    type: STRING
+  - id: postgresql.analytics_schemaname
+    type: STRING
+  - id: postgresql.username
+    type: STRING
+  - id: s3.filename
+    type: STRING
+
+tasks:
+  - id: loadDuplicatesToAnalytics
+    type: io.kestra.plugin.scripts.python.Commands
+    namespaceFiles:
+      enabled: true
+    taskRunner:
+      type: io.kestra.plugin.core.runner.Process
+    beforeCommands:
+      - 'pip install pandas sqlalchemy psycopg2-binary'
+    commands:
+      - python scripts/loadDuplicatesToAnalytics.py {{ outputs.ionToCsv.uri }} '{{inputs.postgresql.username}}' '{{inputs.postgresql.password}}' '{{inputs.postgresql.hostname}}' '{{inputs.postgresql.port}}' '{{inputs.postgresql.database}}' '{{inputs.postgresql.ingestion_schemaname}}' '{{inputs.postgresql.analytics_schemaname}}' '{{inputs.s3.filename}}'
+
+  # - id: log
+  #   type: io.kestra.plugin.core.log.Log
+  #   message: '{{ outputs.getDistinctDuplicatesDetails.rows }}'
