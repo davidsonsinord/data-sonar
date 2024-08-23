@@ -72,6 +72,7 @@ def columns_analytics_status(df):
 ## on recupere le resultat de la fonction dans le dataframe 
 df = pd.DataFrame(data)
 res = columns_analytics_status(df)
+print(res)
 
 # Insertion du DataFrame dans la table PostgreSQL
 with engine.connect() as connection:
