@@ -14,12 +14,16 @@ _analytics_schema = sys.argv[7]
 _filename = sys.argv[8]
 
 engine = create_engine('postgresql+psycopg2://'+_username+':'+_password+'@'+_hostname+':'+_port+'/'+_database)
+INPUT_SCHEMA = _ingestion_schema
+OUTPUT_SCHEMA = _analytics_schema
 INPUT_TABLENAME = _filename.rsplit('/', 1)[1].rsplit('.', 1)[0]
+TABLE_SUFFIX = '_columns_analytics_status'
+OUTPUT_TABLENAME = INPUT_TABLENAME + TABLE_SUFFIX
 
 data = pd.read_sql_table(INPUT_TABLENAME, engine, schema=_ingestion_schema)
 
 # Fonction qui détermine : le nom des colonnes, le type des colonnes, anomalies sur les colonnes, exemples de valeurs
-def detect_anomalies(df):
+def columns_analytics_status(df):
     results = []
 
     for column in df.columns:
@@ -47,6 +51,7 @@ def detect_anomalies(df):
         
         anomaly = 1 if anomaly_type != ' ' else 0
         
+        ## Verification du type des colonnes
         column_type_str = 'integer' if np.issubdtype(column_type, np.integer) else \
                           'float' if np.issubdtype(column_type, np.floating) else \
                           'date' if np.issubdtype(column_type, np.datetime64) else \
@@ -60,10 +65,15 @@ def detect_anomalies(df):
         results.append([column, column_type_str, anomaly, anomaly_type, example_values])
 
     # Création du DataFrame des résultats
-    anomalies_df = pd.DataFrame(results, columns=['Name', 'Type of Data', 'Anomaly','Type of Anomaly','Example of values'])
+    df = pd.DataFrame(results, columns=['Name', 'Type of Data', 'Anomaly','Type of Anomaly','Example of values'])
 
-    return anomalies_df
+    return df
 
+## on recupere le resultat de la fonction dans le dataframe 
 df = pd.DataFrame(data)
-anomalies_df = detect_anomalies(df)
-print(anomalies_df)
+res = columns_analytics_status(df)
+
+# Insertion du DataFrame dans la table PostgreSQL
+with engine.connect() as connection:
+    res.to_sql(OUTPUT_TABLENAME, connection, schema=OUTPUT_SCHEMA, if_exists='replace', index=False)
+
