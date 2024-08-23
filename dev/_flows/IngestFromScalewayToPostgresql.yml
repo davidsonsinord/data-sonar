@@ -141,4 +141,20 @@ tasks:
         postgresql.analytics_schemaname: '{{ inputs.postgresql.analytics_schemaname }}'
         postgresql.username: '{{ inputs.postgresql.username }}'
         s3.filename: '{{ taskrun.value }}'
+
+    - id: getColumnsAnalyticsStatus
+      type: io.kestra.plugin.core.flow.Subflow
+      namespace: datasonar.dev
+      flowId: GetColumnsAnalyticsStatus
+      wait: true
+      transmitFailed: true
+      inputs:
+        postgresql.database: '{{ inputs.postgresql.database }}'
+        postgresql.hostname: '{{ inputs.postgresql.hostname }}'
+        postgresql.password: "{{ secret('DATASONAR_DB_PASSWORD') }}"
+        postgresql.port: '{{ inputs.postgresql.port }}'
+        postgresql.ingestion_schemaname: '{{ inputs.postgresql.ingestion_schemaname }}'
+        postgresql.analytics_schemaname: '{{ inputs.postgresql.analytics_schemaname }}'
+        postgresql.username: '{{ inputs.postgresql.username }}'
+        s3.filename: '{{ taskrun.value }}'
     
